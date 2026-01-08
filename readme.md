@@ -96,11 +96,11 @@ To reproduce the results of Phase 1 and Phase 2, the following environment is re
 
 
 
+---
+---
 
 
-
-
-This is a the basic way our algorithm works(The basic understanding for the future reference).
+## This is a the basic way our algorithm works(The basic understanding for the future reference).
 
 First, we randomly generate values within the constraints; these are represented by the vector of variables called chromosomes. Then, these data points are split into ranks based on non-domination. The ranks are sorted such that the first rank is not dominated by any other, and the next rank is only dominated by the first rank, and so on; this forms the Pareto fronts.
 
