@@ -1,3 +1,17 @@
+## System Boundaries
+This study focuses exclusively on high-level vehicle design parameters affecting
+energy consumption and performance. Detailed subsystems such as aerodynamics,
+thermal behavior, drivetrain losses, road conditions, and driver behavior are
+outside the scope of this work. These effects are implicitly approximated through
+simplified objective functions.
+
+## Assumptions
+- The vehicle operates under standard driving conditions.
+- Energy consumption and acceleration can be approximated using analytical models.
+- Effects of aerodynamics and road grade are not modeled explicitly.
+- All design variables are independent.
+
+
 # Phase 1: Problem Definition & Requirements
 
 ## 1. Engineering Use Case
@@ -68,3 +82,39 @@ To reproduce the results of Phase 1 and Phase 2, the following environment is re
     * `matplotlib`: For visualizing the Pareto Front (Objective Space).
     * `random`: For stochastic processes (Initialization, Mutation).
     * `pymoo`: Implementation of NSGA-II and evolutionary operators.
+
+---
+
+# Phase 2: System Modeling & Simulation
+
+## 1. Objective
+To allow the NSGA-II algorithm to evaluate potential solutions, we developed a Python-based "Dummy Vehicle Model." This model acts as the environment, accepting design parameters (Genotype) and returning performance metrics (Phenotype).
+
+## 2. Implementation Strategy: Normalization
+To prevent numerical bias (where large numbers like Mass=1800 dominate small numbers like Gear=4), we implemented **Min-Max Normalization**.
+* All inputs are converted to a $0 \dots 1$ scale ($P_n, M_n, G_n$) before calculation.
+* **Benefit:** This ensures the optimizer treats all variables with equal importance.
+
+## 3. Mathematical Models (Objective Functions)
+
+### Function 1: Acceleration Score (Minimize)
+* **Formula Logic:** $f_1 \propto \frac{Mass}{Power \times Efficiency}$
+* **Behavior:**
+    * Higher Power $\rightarrow$ Lower Score (Better)
+    * Lower Mass $\rightarrow$ Lower Score (Better)
+
+### Function 2: Energy Consumption Score (Minimize)
+* **Formula Logic:** $f_2 \propto Mass \times Power^2 \times Inefficiency$
+* **Behavior:**
+    * Higher Power $\rightarrow$ Higher Score (Worse)
+    * Higher Mass $\rightarrow$ Higher Score (Worse)
+
+### The "Gear Ratio" Complexity
+To test the optimizer's ability to find non-linear solutions, we introduced a parabolic efficiency curve for the Gear Ratio ($G$).
+* **Optimum:** The mechanism is most efficient at the normalized midpoint ($0.5$), corresponding to $G \approx 4.5$.
+* **Penalty:** Moving $G$ towards $3.0$ or $6.0$ reduces efficiency, penalizing both Acceleration and Energy.
+
+## 4. Verification (Sanity Check)
+We ran manual boundary tests to confirm physics compliance:
+1.  **High Power / Low Mass:** Resulted in low Acceleration score (Fast) and high Energy score (High Consumption). $\rightarrow$ **PASS**
+2.  **Low Power / High Mass:** Resulted in high Acceleration score (Slow) and low Energy score (Efficient). $\rightarrow$ **PASS**
