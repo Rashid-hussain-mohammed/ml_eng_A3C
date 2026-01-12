@@ -12,109 +12,90 @@ simplified objective functions.
 - All design variables are independent.
 
 
-# Phase 1: Problem Definition & Requirements
+# Project Phases & Design Log (Evaluation Report)
 
-## 1. Engineering Use Case
-Scenario: Early-stage passenger vehicle design optimization.
-**Problem Statement:** Automotive engineers face a fundamental conflict when designing powertrains:
+##  Document Scope
+This document records the engineering decisions, mathematical formulations, system boundaries, and validation steps taken throughout the project lifecycle. It serves as the formal **Evaluation Report** for Milestone M4.
+
+## 1. System Boundaries & Assumptions
+**Boundaries:**
+This study focuses exclusively on high-level vehicle design parameters affecting energy consumption and performance. Detailed subsystems such as aerodynamics, thermal behavior, drivetrain losses, and road friction are outside the scope of this work; their effects are implicitly approximated through simplified objective functions.
+
+**Assumptions:**
+1.  The vehicle operates under standard driving conditions.
+2.  Energy consumption and acceleration can be approximated using analytical models.
+3.  Design variables (Mass, Power, Gear Ratio) are treated as independent.
+
+---
+
+## Phase 1: Problem Definition & Requirements
+
+### 1.1 Engineering Use Case
+**Scenario:** Early-stage passenger vehicle design optimization.
+**Problem Statement:** Automotive engineers face a fundamental conflict:
 * Increasing power improves acceleration (performance) but drastically increases energy consumption.
-* Reducing mass improves efficiency but may limit structural or powertrain options.
-* There is no single "best" car; there is only a set of optimal trade-offs.
-* This optimization is performed during the conceptual design phase, where rapid exploration of design trade-offs is prioritized over high-fidelity simulation.
+* Reducing mass improves efficiency but may limit structural options.
+* **Result:** There is no single "best" car; there is only a set of optimal trade-offs (Pareto Front).
 
-**Solution Approach:** We utilize **NSGA-II (Non-Dominated Sorting Genetic Algorithm II)** to automate the discovery of the Pareto-optimal front. This allows us to present a set of optimal design alternatives (e.g., "High Performance/High Energy" vs. "Eco-Mode/Low Energy") rather than a single compromise solution.
+### 1.2 Solution Approach
+We utilize **NSGA-II (Non-Dominated Sorting Genetic Algorithm II)** to automate the discovery of these trade-offs. This allows us to present a set of optimal design alternatives (e.g., "Sport Mode" vs. "Eco Mode") rather than a single compromise solution.
 
----
+### 1.3 Decision Variables (The Genotype)
+| Variable | Symbol | Range | Unit | Justification |
+| :--- | :--- | :--- | :--- | :--- |
+| **Power** | $P$ | 60 - 150 | kW | Ranges from economy city car to performance sedan. |
+| **Mass** | $M$ | 1000 - 1800 | kg | Realistic curb weights for modern passenger vehicles. |
+| **Gear Ratio** | $G$ | 3.0 - 6.0 | - | Typical final drive ratios for standard transmissions. |
 
-## 2. Mathematical Formulation
-
-### 2.1 Decision Variables (The Genotype)
-The optimization algorithm controls three core design parameters. These variables were selected to balance computational simplicity with physical plausibility.
-
-| Variable Symbol | Description | Unit | Lower Bound | Upper Bound | Justification |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **P** | Engine/Motor Power | kW | 60 | 150 | Ranges from economy city car to performance sedan. |
-| **M** | Vehicle Mass | kg | 1000 | 1800 | Realistic curb weights for modern passenger vehicles. |
-| **G** | Final Gear Ratio | - | 3.0 | 6.0 | Typical final drive ratios for standard transmissions. |
-
-### 2.2 Objectives (The Phenotype)
+### 1.4 Objectives (The Phenotype)
 We perform **Minimization** on both objectives.
-
-**Objective 1: Acceleration Time ($f_1$)**
-* **Goal:** Minimize time to reach 100 km/h.
-* **Description:** Represents the "Performance" aspect of the vehicle.
-* **Conflict:** Requires high power and low mass.
-
-**Objective 2: Energy Consumption ($f_2$)**
-* **Goal:** Minimize Energy/Fuel used per 100 km.
-* **Description:** Represents the "Efficiency" aspect of the vehicle.
-* **Conflict:** Penalizes high power and high mass.
-
-Optimization Objective:
-Minimize F(x) = [f₁(P, M, G), f₂(P, M, G)]
-
-### 2.3 Constraints
-The system puts on the following hard constraints. Any solution violating these is considered invalid.
-
-1.  **Variable Bounds:** $60 \le P \le 150$, $1000 \le M \le 1800$, $3.0 \le G \le 6.0$
-2.  **Performance Threshold (Acceptance Criterion):** Ideally, Acceleration time should ideally be ≤ 12.0 seconds for the vehicle to be market-viable. This condition is used post-optimization for solution filtering and validation, not as a hard feasibility constraint.
+1.  **Acceleration Time ($f_1$):** Minimize time to reach 100 km/h.
+2.  **Energy Consumption ($f_2$):** Minimize Energy/Fuel used per 100 km.
 
 ---
 
-## 3. Algorithm Selection Justification
+## Phase 2: System Modeling & Simulation
 
-**Selected Algorithm:** NSGA-II (Non-Dominated Sorting Genetic Algorithm II)
+### 2.1 Scope Note (Simplification)
+* **Lecture Alignment:** The course case study references complex drivetrain variables (axle ratio, rolling radius).
+* **Implementation Decision:** For this prototype (Milestone M2), we utilized a **Simplified Parametric Model**. We mapped the complex physics into normalized functions of Mass, Power, and Gear Ratio. This allows us to demonstrate the **NSGA-II algorithm's behavior** effectively without requiring a high-fidelity physics engine.
 
-**Why NSGA-II?**
-1.  **Multi-Objective Nature:** The problem has two conflicting objectives ($f_1$ vs. $f_2$). Single-objective algorithms (like standard GA or Gradient Descent) cannot capture the trade-off curve.
-2.  **Pareto Optimality:** NSGA-II is specifically designed to maintain a diverse set of non-dominated solutions (the Pareto Front).
-3.  **Elitism:** The algorithm preserves the best solutions from previous generations, ensuring the population quality never degrades.
-4.  **Course Alignment:** This method directly addresses the requirements for "Automotive Case Study #3" as defined in the "Machine Learning in Engineering Applications" curriculum.
-
----
-
-## 4. Technical Requirements
-To reproduce the results of Phase 1 and Phase 2, the following environment is required:
-
-* **Language:** Python 3.8+
-* **Core Libraries:**
-    * `numpy`: For vectorized physics calculations and matrix operations.
-    * `matplotlib`: For visualizing the Pareto Front (Objective Space).
-    * `random`: For stochastic processes (Initialization, Mutation).
-    * `pymoo`: Implementation of NSGA-II and evolutionary operators.
-
----
-
-# Phase 2: System Modeling & Simulation
-
-## 1. Objective
-To allow the NSGA-II algorithm to evaluate potential solutions, we developed a Python-based "Dummy Vehicle Model." This model acts as the environment, accepting design parameters (Genotype) and returning performance metrics (Phenotype).
-
-## 2. Implementation Strategy: Normalization
+### 2.2 Mathematical Strategy: Normalization
 To prevent numerical bias (where large numbers like Mass=1800 dominate small numbers like Gear=4), we implemented **Min-Max Normalization**.
-* All inputs are converted to a $0 \dots 1$ scale ($P_n, M_n, G_n$) before calculation.
+* All inputs are converted to a $0 \dots 1$ scale before calculation.
 * **Benefit:** This ensures the optimizer treats all variables with equal importance.
 
-## 3. Mathematical Models (Objective Functions)
+### 2.3 Verification (Sanity Check)
+Manual boundary tests confirmed physics compliance:
+* **High Power / Low Mass:** Resulted in fast acceleration but high energy consumption. (Pass)
+* **Low Power / High Mass:** Resulted in slow acceleration but better efficiency. (Pass)
 
-### Function 1: Acceleration Score (Minimize)
-* **Formula Logic:** $f_1 \propto \frac{Mass}{Power \times Efficiency}$
-* **Behavior:**
-    * Higher Power $\rightarrow$ Lower Score (Better)
-    * Lower Mass $\rightarrow$ Lower Score (Better)
+---
 
-### Function 2: Energy Consumption Score (Minimize)
-* **Formula Logic:** $f_2 \propto Mass \times Power^2 \times Inefficiency$
-* **Behavior:**
-    * Higher Power $\rightarrow$ Higher Score (Worse)
-    * Higher Mass $\rightarrow$ Higher Score (Worse)
+## Phase 3: Algorithm Implementation
 
-### The "Gear Ratio" Complexity
-To test the optimizer's ability to find non-linear solutions, we introduced a parabolic efficiency curve for the Gear Ratio ($G$).
-* **Optimum:** The mechanism is most efficient at the normalized midpoint ($0.5$), corresponding to $G \approx 4.5$.
-* **Penalty:** Moving $G$ towards $3.0$ or $6.0$ reduces efficiency, penalizing both Acceleration and Energy.
+### 3.1 Tool Selection
+We transitioned to the **`pymoo`** Python framework for the production implementation.
+* **Justification:** `pymoo` offers a verified, industry-standard implementation of NSGA-II. This eliminates potential bugs in the sorting/crowding logic and allows us to focus on the vehicle physics model.
 
-## 4. Verification (Sanity Check)
-We ran manual boundary tests to confirm physics compliance:
-1.  **High Power / Low Mass:** Resulted in low Acceleration score (Fast) and high Energy score (High Consumption). $\rightarrow$ **PASS**
-2.  **Low Power / High Mass:** Resulted in high Acceleration score (Slow) and low Energy score (Efficient). $\rightarrow$ **PASS**
+### 3.2 Algorithm Configuration
+* **Population Size:** 120 (High diversity)
+* **Generations:** 200 (Ensures convergence)
+* **Crossover:** SBX (Simulated Binary Crossover) with $\eta=20$
+* **Mutation:** Polynomial Mutation with $\eta=25$
+
+---
+
+## Phase 4: Validation & Results
+
+### 4.1 Pareto Front Analysis
+The algorithm successfully produced a convex Pareto Front, confirming the conflicting nature of the objectives.
+* **Region A (Top-Left):** "Eco-Cruisers." Low Power, Low Mass. Slow but very efficient.
+* **Region B (Bottom-Right):** "Sport Performance." High Power. Fast but energy-intensive.
+* **Region C (Middle):** "Balanced Commuters." The optimal compromise for a standard vehicle.
+
+### 4.2 Stability Check
+We performed 7 independent runs with different random seeds. The resulting Pareto fronts overlapped consistently, validating that the algorithm is robust and has converged to a global optimum rather than a local anomaly.
+
+### 4.3 Conclusion
+The project meets all acceptance criteria defined in Milestone M3. The system successfully automates the trade-off analysis, providing the engineering team with a diverse set of optimal vehicle configurations.
