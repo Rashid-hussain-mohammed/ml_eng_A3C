@@ -26,7 +26,7 @@ def plot_multiple_pareto_fronts(n_runs=5):
     # plt.legend()
 
     plt.tight_layout()
-    plt.savefig("results/pareto_front_multiple_runs.png", dpi=300)
+    plt.savefig("../results/pareto_front_multiple_runs.png", dpi=300)
     plt.show()
 
 
