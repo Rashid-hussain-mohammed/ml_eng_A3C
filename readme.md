@@ -38,7 +38,10 @@ pip install -r requirements.txt
 To run the code after cloning the repo and installing all the requirements needed run plot_results.py.
 
 
-## Structure of the Repository
+## Repository Structure
+This project follows a standard Python engineering structure.
+
+```text
 ├── PHASES.md               # Detailed Design Log & Engineering Decisions (Evaluation Report)
 ├── README.md               # Project Overview & Installation Guide
 ├── requirements.txt        # List of Python dependencies (numpy, pymoo, matplotlib)
