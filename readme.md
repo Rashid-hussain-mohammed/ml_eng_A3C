@@ -19,8 +19,7 @@ Now comes Crossover and Mutation. Crossover is carried out on the selected paren
 
 After that, the parents and children are combined into a single population of size 2N. We sort this combined group using non-dominated sorting. The new generation is formed by filling it with the best fronts (Rank 1, then Rank 2, etc.). If a front cannot fit entirely into the new generation, we sort that specific front by crowding distance and pick the most diverse solutions to fill the remaining slots.
 
-This complete process is repeated until a Termination Criteria is met, and then you will have the best trade-off solutions among the objectives.## 🚀 Getting Started (How to Reproduce)
-Follow these steps to replicate our experimental results.
+This complete process is repeated until a Termination Criteria is met, and then you will have the best trade-off solutions among the objectives.
 
 ---
 ## Getting Started. (How can you run the same project in your computer)
