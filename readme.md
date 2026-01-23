@@ -20,9 +20,9 @@ Think of this algorithm as a team of workers reporting to a manager (Global Brai
 
         Low Reward: High Fuel, Low Elasticity.
 
-    **Asynchronous Update**: When a worker finishes a simulation, it calculates what went right or wrong and sends a "Learning Update" (Gradient) to the Master Brain. The Master Brain updates its weights immediately.
+    Asynchronous Update: When a worker finishes a simulation, it calculates what went right or wrong and sends a "Learning Update" (Gradient) to the Master Brain. The Master Brain updates its weights immediately.
 
-    **Syncing**: The worker then downloads the new, smarter weights from the Master Brain and tries again. Because many workers are exploring different designs at the same time, the AI learns much faster and doesn't get stuck in bad designs easily.
+    Syncing: The worker then downloads the new, smarter weights from the Master Brain and tries again. Because many workers are exploring different designs at the same time, the AI learns much faster and doesn't get stuck in bad designs easily.
 
 **The "Actor" and the "Critic"**:
 
@@ -42,7 +42,7 @@ Think of this algorithm as a team of workers reporting to a manager (Global Brai
 
         Solution: We implemented a wrapper that automatically sorts the gear outputs from the Neural Network before sending them to the simulation.
 
-    **Reward Function**: Reward = (Sum of Elasticities) - (Fuel_Consumption * 2.0)
+    Reward Function: Reward = (Sum of Elasticities) - (Fuel_Consumption * 2.0)
     We penalize Fuel heavily to ensure the car is efficient.
 
     Running the A3C Code
