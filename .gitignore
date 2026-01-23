@@ -1,0 +1,17 @@
+# Virtual Environment
+venv/
+env/
+.env
+
+# Python compilation
+__pycache__/
+*.pyc
+
+# IDE settings
+.vscode/
+.idea/
+
+# Project Specific Output
+*.log
+# If you don't want to track the exe itself (optional)
+# ConsumptionCar.exe
