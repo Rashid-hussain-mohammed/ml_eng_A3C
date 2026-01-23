@@ -1,7 +1,0 @@
-#Core Sim libs.
-
-numpy>=1.21
-matplotlib>=3.5
-pymoo>=0.6.0
-
-# Note : - python3 3.9 or higher is required.
