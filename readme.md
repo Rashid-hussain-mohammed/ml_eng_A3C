@@ -75,4 +75,4 @@ This project follows a standard Python engineering structure.
     ├── ConsumptionCar.exe  # The Simulation File
     ├── model.py            # Physics Model wrapper
     ├── run_nsga2.py        # Evolutionary Algorithm (Deliverable 3)
-    └── run_a3c.py          # [NEW] A3C Algorithm (Deliverable 2)```
+    └── run_a3c.py          # [NEW] A3C Algorithm (Deliverable 2)

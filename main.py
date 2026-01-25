@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import threading
 import multiprocessing
 import queue
+import platform
+
 
 # --- CONFIGURATION ---
 EXE_FILENAME = "ConsumptionCar.exe"
@@ -50,7 +52,15 @@ class CarEnvironment:
         
         try:
             # Using wine
-            command = ["wine", self.exe_filename] + args
+            system = platform.system()
+
+            if system == "Linux":
+                command = ["wine", self.exe_filename] + args
+            elif system == "Windows":
+                command = [self.exe_filename] + args
+            else:
+                raise RuntimeError(f"Unsupported OS: {platform.system}. This simulator supports Linux (Wine) or Windows only.")
+
             
             result = subprocess.run(
                 command, 
