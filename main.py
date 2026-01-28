@@ -22,6 +22,12 @@ NUM_WORKERS = multiprocessing.cpu_count() # Number of parallel threads (e.g., 4,
 global_episode_count = 0
 episode_count_lock = threading.Lock()
 global_rewards = []
+# --- LOGGING GLOBALS ---
+global_actions = []          # Actions before simulation
+global_sim_outputs = []      # [fc, el_g3, el_g4, el_g5]
+
+actions_lock = threading.Lock()
+sim_outputs_lock = threading.Lock()
 rewards_lock = threading.Lock()
 
 # --- ENVIRONMENT ---
@@ -79,6 +85,10 @@ class CarEnvironment:
                 return real_values, -100.0, True # Done if error
 
             fc, el_g3, el_g4, el_g5 = outputs[0], outputs[1], outputs[2], outputs[3]
+            # Log simulation outputs
+            with sim_outputs_lock:
+                global_sim_outputs.append([fc, el_g3, el_g4, el_g5])
+
 
             # 4. Calculate Reward
             # Minimize Fuel (subtract), Maximize Elasticity (add)
@@ -149,6 +159,8 @@ class Worker(threading.Thread):
                 # Interact with Environment
                 # Note: We convert tensor to numpy for the env
                 real_action = action_norm.numpy()[0]
+                with actions_lock:
+                    global_actions.append(real_action.copy())
                 _, reward, done = self.env.step(real_action)
                 
                 # Calculate Loss
@@ -214,6 +226,30 @@ if __name__ == "__main__":
         worker.join()
         
     print("\nTraining Complete.")
+    # --- BEST SOLUTION FOUND ---
+    best_reward = -np.inf
+    best_action = None
+
+    for action, reward in zip(global_actions, global_rewards):
+        if reward > best_reward:
+            best_reward = reward
+            best_action = action
+
+    print("\nBest reward found:", best_reward)
+    print("Best normalized parameters:", best_action)
+
+    # Convert best normalized parameters to real engineering values
+    env = CarEnvironment(EXE_FILENAME)
+
+    best_real_parameters = (
+        env.bounds_low +
+        best_action * (env.bounds_high - env.bounds_low)
+    )
+
+    print("Best real design parameters:")
+    for i, val in enumerate(best_real_parameters):
+        print(f"  Parameter {i+1}: {val:.4f}")
+
     
     # 5. Visualization
     plt.figure(figsize=(10, 5))
@@ -224,3 +260,40 @@ if __name__ == "__main__":
     plt.grid(True)
     plt.savefig("optimization_results_A3C.png")
     print("Results saved to 'optimization_results_A3C.png'")
+    # --- SIMULATION OUTPUT PLOTS ---
+    sim_outputs_array = np.array(global_sim_outputs)
+
+    labels = ["Fuel Consumption", "Elasticity G3", "Elasticity G4", "Elasticity G5"]
+
+    plt.figure(figsize=(10, 6))
+    for i in range(sim_outputs_array.shape[1]):
+        plt.plot(sim_outputs_array[:, i], label=labels[i])
+
+    plt.title("Simulation Outputs During Optimization")
+    plt.xlabel("Episode")
+    plt.ylabel("Value")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig("simulation_outputs.png")
+    print("Saved simulation_outputs.png")
+    # --- OPTIMIZED PARAMETERS (REAL VALUES) ---
+    actions_array = np.array(global_actions)
+
+    real_actions = (
+        env.bounds_low +
+        actions_array * (env.bounds_high - env.bounds_low)
+    )
+
+    plt.figure(figsize=(10, 6))
+    for i in range(real_actions.shape[1]):
+        plt.plot(real_actions[:, i], label=f'Parameter {i+1}')
+
+    plt.title("Optimized Design Parameters (Real Engineering Values)")
+    plt.xlabel("Episode")
+    plt.ylabel("Parameter Value")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig("optimized_parameters_real.png")
+    print("Saved optimized_parameters_real.png")
+
+
