@@ -1,4 +1,9 @@
 What is the A3C about: - Its a Async 
 
 
-“Did you really need three use cases?” : - Yes, we derived one primary use case per major system interaction: optimization execution, training execution, and result validation, corresponding to the main technical responsibilities in the project.
+Did you really need three use cases? : - Yes, we derived one primary use case per major system interaction: optimization execution, training execution, and result validation, corresponding to the main technical responsibilities in the project.
+
+
+What is off policy and what is on policy: - 
+
+What is n-step return: - 

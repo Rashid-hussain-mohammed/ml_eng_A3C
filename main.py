@@ -8,6 +8,8 @@ import threading
 import multiprocessing
 import queue
 import platform
+import csv
+import pandas as pd
 
 
 # --- CONFIGURATION ---
@@ -226,6 +228,15 @@ if __name__ == "__main__":
         worker.join()
         
     print("\nTraining Complete.")
+    # --- EXPORT REWARDS ---
+    rewards_df = pd.DataFrame({
+        "Episode": np.arange(len(global_rewards)),
+        "Reward": global_rewards
+    })
+
+    rewards_df.to_csv("a3c_rewards.csv", index=False)
+    print("Saved a3c_rewards.csv")
+
     # --- BEST SOLUTION FOUND ---
     best_reward = -np.inf
     best_action = None
@@ -249,6 +260,43 @@ if __name__ == "__main__":
     print("Best real design parameters:")
     for i, val in enumerate(best_real_parameters):
         print(f"  Parameter {i+1}: {val:.4f}")
+        # --- EXPORT DESIGN PARAMETERS ---
+    actions_array = np.array(global_actions)
+
+    real_params = (
+        actions_array * (CarEnvironment(EXE_FILENAME).bounds_high -
+                        CarEnvironment(EXE_FILENAME).bounds_low)
+        + CarEnvironment(EXE_FILENAME).bounds_low
+    )
+
+    params_df = pd.DataFrame(
+        real_params,
+        columns=[
+            "Engine_Displacement",
+            "Compression_Ratio",
+            "Gear_Ratio_G3",
+            "Gear_Ratio_G4",
+            "Gear_Ratio_G5"
+        ]
+    )
+
+    params_df.to_csv("optimized_parameters.csv", index=False)
+    print("Saved optimized_parameters.csv")
+
+    # --- EXPORT SIMULATION OUTPUTS ---
+    sim_df = pd.DataFrame(
+        global_sim_outputs,
+        columns=[
+            "Fuel_Consumption",
+            "Elasticity_G3",
+            "Elasticity_G4",
+            "Elasticity_G5"
+        ]
+    )
+
+    sim_df.to_csv("simulation_outputs.csv", index=False)
+    print("Saved simulation_outputs.csv")
+
 
     
     # 5. Visualization
