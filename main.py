@@ -25,10 +25,10 @@ global_episode_count = 0
 episode_count_lock = threading.Lock()
 global_rewards = []
 # --- LOGGING GLOBALS ---
-global_actions = []          # Actions before simulation
-global_sim_outputs = []      # [fc, el_g3, el_g4, el_g5]
 
-actions_lock = threading.Lock()
+global_sim_outputs = []      # [fc, el_g3, el_g4, el_g5]
+global_evaluated_designs = []
+evaluated_lock = threading.Lock()
 sim_outputs_lock = threading.Lock()
 rewards_lock = threading.Lock()
 
@@ -91,17 +91,24 @@ class CarEnvironment:
             with sim_outputs_lock:
                 global_sim_outputs.append([fc, el_g3, el_g4, el_g5])
 
-
-            # 4. Calculate Reward
+                        # 4. Calculate Reward
             # Minimize Fuel (subtract), Maximize Elasticity (add)
             reward = (el_g3 + el_g4 + el_g5) - (fc * 2.0)
+
+            with evaluated_lock:
+                global_evaluated_designs.append([
+                    real_values[0], real_values[1],
+                    real_values[2], real_values[3], real_values[4],
+                    fc, el_g3, el_g4, el_g5,
+                    reward
+                ])
 
         except Exception as e:
             print(f"  [Worker {self.worker_id} Error]: {e}")
             reward = -100.0
             return real_values, reward, True
             
-        return real_values, reward, False # False = Not done (continuous task, but we treat 1 step as episode for this specific problem often)
+        return real_values.copy(), reward, False # False = Not done (continuous task, but we treat 1 step as episode for this specific problem often)
 
     def reset(self):
         return np.random.rand(5)
@@ -161,8 +168,7 @@ class Worker(threading.Thread):
                 # Interact with Environment
                 # Note: We convert tensor to numpy for the env
                 real_action = action_norm.numpy()[0]
-                with actions_lock:
-                    global_actions.append(real_action.copy())
+
                 _, reward, done = self.env.step(real_action)
                 
                 # Calculate Loss
@@ -174,16 +180,17 @@ class Worker(threading.Thread):
                 advantage = target - value
                 
                 # Actor Loss
-                log_prob = dist.log_prob(action_norm)
+                log_prob = dist.log_prob(action)
                 actor_loss = -tf.reduce_sum(log_prob * advantage)
+
                 
                 # Critic Loss
-                critic_loss = tf.square(advantage)
+                critic_loss = tf.reduce_mean(tf.square(advantage))
                 
                 # Entropy (optional, encourages exploration)
-                entropy = dist.entropy()
-                
+                entropy = tf.reduce_sum(dist.entropy())
                 total_loss = tf.reduce_mean(actor_loss + critic_loss - 0.01 * entropy)
+
 
             # Calculate Gradients using LOCAL model
             grads = tape.gradient(total_loss, self.local_model.trainable_variables)
@@ -240,48 +247,20 @@ if __name__ == "__main__":
     # --- BEST SOLUTION FOUND ---
     best_reward = -np.inf
     best_action = None
+    best_design = max(global_evaluated_designs, key=lambda x: x[-1])
 
-    for action, reward in zip(global_actions, global_rewards):
-        if reward > best_reward:
-            best_reward = reward
-            best_action = action
+    print("\nBest real design parameters (constraint-valid):")
+    print(f"Engine_Displacement: {best_design[0]:.4f}")
+    print(f"Compression_Ratio: {best_design[1]:.4f}")
+    print(f"Gear_Ratio_G3: {best_design[2]:.4f}")
+    print(f"Gear_Ratio_G4: {best_design[3]:.4f}")
+    print(f"Gear_Ratio_G5: {best_design[4]:.4f}")
+    print(f"Reward: {best_design[-1]:.4f}")
+    
 
-    print("\nBest reward found:", best_reward)
-    print("Best normalized parameters:", best_action)
 
     # Convert best normalized parameters to real engineering values
     env = CarEnvironment(EXE_FILENAME)
-
-    best_real_parameters = (
-        env.bounds_low +
-        best_action * (env.bounds_high - env.bounds_low)
-    )
-
-    print("Best real design parameters:")
-    for i, val in enumerate(best_real_parameters):
-        print(f"  Parameter {i+1}: {val:.4f}")
-        # --- EXPORT DESIGN PARAMETERS ---
-    actions_array = np.array(global_actions)
-
-    real_params = (
-        actions_array * (CarEnvironment(EXE_FILENAME).bounds_high -
-                        CarEnvironment(EXE_FILENAME).bounds_low)
-        + CarEnvironment(EXE_FILENAME).bounds_low
-    )
-
-    params_df = pd.DataFrame(
-        real_params,
-        columns=[
-            "Engine_Displacement",
-            "Compression_Ratio",
-            "Gear_Ratio_G3",
-            "Gear_Ratio_G4",
-            "Gear_Ratio_G5"
-        ]
-    )
-
-    params_df.to_csv("optimized_parameters.csv", index=False)
-    print("Saved optimized_parameters.csv")
 
     # --- EXPORT SIMULATION OUTPUTS ---
     sim_df = pd.DataFrame(
@@ -296,6 +275,24 @@ if __name__ == "__main__":
 
     sim_df.to_csv("simulation_outputs.csv", index=False)
     print("Saved simulation_outputs.csv")
+    evaluated_df = pd.DataFrame(
+        global_evaluated_designs,
+        columns=[
+            "Engine_Displacement",
+            "Compression_Ratio",
+            "Gear_Ratio_G3",
+            "Gear_Ratio_G4",
+            "Gear_Ratio_G5",
+            "Fuel_Consumption",
+            "Elasticity_G3",
+            "Elasticity_G4",
+            "Elasticity_G5",
+            "Reward"
+        ]
+    )
+
+    evaluated_df.to_csv("evaluated_designs.csv", index=False)
+    print("Saved evaluated_designs.csv")
 
 
     
@@ -325,23 +322,27 @@ if __name__ == "__main__":
     plt.savefig("simulation_outputs.png")
     print("Saved simulation_outputs.png")
     # --- OPTIMIZED PARAMETERS (REAL VALUES) ---
-    actions_array = np.array(global_actions)
-
-    real_actions = (
-        env.bounds_low +
-        actions_array * (env.bounds_high - env.bounds_low)
-    )
+    evaluated_array = np.array(global_evaluated_designs)
 
     plt.figure(figsize=(10, 6))
-    for i in range(real_actions.shape[1]):
-        plt.plot(real_actions[:, i], label=f'Parameter {i+1}')
+    plt.figure(figsize=(10, 6))
+    plt.plot(evaluated_array[:, 2], label="Gear Ratio G3")
+    plt.plot(evaluated_array[:, 3], label="Gear Ratio G4")
+    plt.plot(evaluated_array[:, 4], label="Gear Ratio G5")
+    plt.title("Gear Ratio Evolution (Constraint Enforced)")
+    plt.xlabel("Episode")
+    plt.ylabel("Gear Ratio Value")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig("gear_ratios_constraint_validated.png")
 
-    plt.title("Optimized Design Parameters (Real Engineering Values)")
+
+    plt.title("Optimized Design Parameters (Evaluated Designs)")
     plt.xlabel("Episode")
     plt.ylabel("Parameter Value")
     plt.legend()
     plt.grid(True)
     plt.savefig("optimized_parameters_real.png")
-    print("Saved optimized_parameters_real.png")
+
 
 
