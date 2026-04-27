@@ -12,15 +12,15 @@ to optimize decision-making in a constrained simulation environment.
 ## 📊 Results
 
 ### Optimization Performance
-![Optimization Results](assets/optimization_results_A3C.png)
+![Optimization Results](/optimization_results_A3C.png)
 
 The agent shows increasing reward over time, indicating learning convergence.
 
 ### Simulation Outputs
-![Simulation Outputs](assets/simulation_outputs.png)
+![Simulation Outputs](/simulation_outputs.png)
 
 ### Constraint Validation
-![Constraint Validation](assets/gear_ratios_constraint_validated.png)
+![Constraint Validation](/gear_ratios_constraint_validated.png)
 
 ## 📁 Data Outputs
 CSV files included for reproducibility and further analysis.
